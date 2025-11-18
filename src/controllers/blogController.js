@@ -476,7 +476,7 @@ const permanentDeleteBlog = async (req, res) => {
 
 /**
  * Search blogs using full-text search
- * GET /api/search?query=death+care&page=1&limit=20
+ * GET /api/blogs/search?query=death+care&page=1&limit=20
  */
 const searchBlogsController = async (req, res) => {
   try {
@@ -485,15 +485,44 @@ const searchBlogsController = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
+    logger.info('Search request', { query, page, limit });
+
     const results = await searchBlogs(query, limit, offset);
+
+    // Generate presigned URLs for search results (only if URLs exist)
+    const blogsWithUrls = await Promise.all(
+      results.results.map(async (blog) => {
+        try {
+          return {
+            ...blog,
+            contentUrl: blog.contentUrl ? await generatePresignedUrl(blog.contentUrl) : null,
+            coverImageUrl: blog.coverImageUrl ? await generatePresignedUrl(blog.coverImageUrl) : null,
+          };
+        } catch (error) {
+          // If URL generation fails, return the blog without presigned URLs
+          logger.warn(`Failed to generate URLs for blog ${blog.id}:`, error.message);
+          return {
+            ...blog,
+            contentUrl: null,
+            coverImageUrl: null,
+          };
+        }
+      })
+    );
+
+    logger.info('Search completed', { 
+      query, 
+      resultsCount: results.results.length, 
+      total: results.pagination.total 
+    });
 
     res.status(200).json({
       success: true,
-      data: results.results,
+      data: blogsWithUrls,
       pagination: results.pagination,
     });
   } catch (error) {
-    logger.error(`Search blogs error: ${error.message}`, { error: error.stack });
+    logger.error(`Search blogs error: ${error.message}`, { error: error.stack, query: req.query.query });
     res.status(500).json({
       success: false,
       message: 'Search failed',
@@ -595,6 +624,170 @@ const getBlogContent = async (req, res) => {
   }
 };
 
+/**
+ * Get latest blogs (most recently published)
+ * GET /api/blogs/feed/latest?limit=10
+ */
+const getLatestBlogs = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // Validate limit
+    if (limit < 1 || limit > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Limit must be between 1 and 50',
+      });
+    }
+
+    logger.info('Latest blogs request', { limit });
+
+    const latestBlogs = await prisma.blog.findMany({
+      where: {
+        status: 'published',
+        deletedAt: null,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        authorId: true,
+        summary: true,
+        tags: true,
+        contentUrl: true,
+        coverImageUrl: true,
+        readTime: true,
+        views: true,
+        likes: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Generate presigned URLs for results
+    const blogsWithUrls = await Promise.all(
+      latestBlogs.map(async (blog) => {
+        try {
+          return {
+            ...blog,
+            contentUrl: blog.contentUrl ? await generatePresignedUrl(blog.contentUrl) : null,
+            coverImageUrl: blog.coverImageUrl ? await generatePresignedUrl(blog.coverImageUrl) : null,
+          };
+        } catch (error) {
+          logger.warn(`Failed to generate URLs for blog ${blog.id}:`, error.message);
+          return {
+            ...blog,
+            contentUrl: null,
+            coverImageUrl: null,
+          };
+        }
+      })
+    );
+
+    logger.info('Latest blogs retrieved', { count: blogsWithUrls.length });
+
+    res.status(200).json({
+      success: true,
+      data: blogsWithUrls,
+      count: blogsWithUrls.length,
+    });
+  } catch (error) {
+    logger.error(`Get latest blogs error: ${error.message}`, { error: error.stack });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch latest blogs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+/**
+ * Get popular blogs (sorted by views)
+ * GET /api/blogs/feed/popular?limit=10
+ */
+const getPopularBlogs = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // Validate limit
+    if (limit < 1 || limit > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Limit must be between 1 and 50',
+      });
+    }
+
+    logger.info('Popular blogs request', { limit });
+
+    const popularBlogs = await prisma.blog.findMany({
+      where: {
+        status: 'published',
+        deletedAt: null,
+      },
+      orderBy: {
+        views: 'desc',
+      },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        authorId: true,
+        summary: true,
+        tags: true,
+        contentUrl: true,
+        coverImageUrl: true,
+        readTime: true,
+        views: true,
+        likes: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    // Generate presigned URLs for results
+    const blogsWithUrls = await Promise.all(
+      popularBlogs.map(async (blog) => {
+        try {
+          return {
+            ...blog,
+            contentUrl: blog.contentUrl ? await generatePresignedUrl(blog.contentUrl) : null,
+            coverImageUrl: blog.coverImageUrl ? await generatePresignedUrl(blog.coverImageUrl) : null,
+          };
+        } catch (error) {
+          logger.warn(`Failed to generate URLs for blog ${blog.id}:`, error.message);
+          return {
+            ...blog,
+            contentUrl: null,
+            coverImageUrl: null,
+          };
+        }
+      })
+    );
+
+    logger.info('Popular blogs retrieved', { count: blogsWithUrls.length });
+
+    res.status(200).json({
+      success: true,
+      data: blogsWithUrls,
+      count: blogsWithUrls.length,
+    });
+  } catch (error) {
+    logger.error(`Get popular blogs error: ${error.message}`, { error: error.stack });
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch popular blogs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
 module.exports = {
   getBlogs,
   getBlogBySlug,
@@ -604,4 +797,6 @@ module.exports = {
   permanentDeleteBlog,
   searchBlogsController,
   getBlogContent,
+  getLatestBlogs,
+  getPopularBlogs,
 };

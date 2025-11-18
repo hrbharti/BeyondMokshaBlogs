@@ -17,14 +17,21 @@ const s3Client = new S3Client({
 
 /**
  * Generate presigned URL for S3 object
- * @param {string} key - S3 object key (e.g., 'blogs/my-blog/content.html')
+ * @param {string} s3Url - S3 URL or key (e.g., 's3://bucket/key' or 'blogs/my-blog/content.html')
  * @param {number} expiresIn - Expiration time in seconds (default: 3600 = 1 hour)
  * @returns {Promise<string>} Presigned URL
  */
-const generatePresignedUrl = async (key, expiresIn = 3600) => {
+const generatePresignedUrl = async (s3Url, expiresIn = 3600) => {
   try {
+    if (!s3Url) {
+      throw new Error('S3 URL is required');
+    }
+
+    // Extract key from URL if it's a full URL, otherwise use as-is
+    const key = extractS3Key(s3Url) || s3Url;
+
     if (!key) {
-      throw new Error('S3 key is required');
+      throw new Error('Could not extract S3 key from URL');
     }
 
     const command = new GetObjectCommand({
@@ -36,10 +43,10 @@ const generatePresignedUrl = async (key, expiresIn = 3600) => {
       expiresIn, // URL valid for 1 hour by default
     });
 
-    logger.debug(`Generated presigned URL for key: ${key} (expires in ${expiresIn}s)`);
+    logger.debug(`Generated presigned URL for key: ${presignedUrl} (expires in ${expiresIn}s)`);
     return presignedUrl;
   } catch (error) {
-    logger.error(`Error generating presigned URL for ${key}: ${error.message}`);
+    logger.error(`Error generating presigned URL for ${s3Url}: ${error.message}`);
     throw new Error(`Failed to generate presigned URL: ${error.message}`);
   }
 };

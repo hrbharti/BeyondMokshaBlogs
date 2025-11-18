@@ -14,6 +14,8 @@ const {
   permanentDeleteBlog,
   searchBlogsController,
   getBlogContent,
+  getLatestBlogs,
+  getPopularBlogs,
 } = require('../controllers/blogController');
 const {
   validateCreateBlog,
@@ -50,17 +52,32 @@ const upload = multer({
  */
 router.get('/', publicReadLimiter, validateBlogListQuery, getBlogs);
 
-// ===========================
-// TEMPORARILY DISABLED: Full-Text Search
-// Uncomment when ready to test search functionality
-// ===========================
 /**
- * @route   GET /api/search
- * @desc    Full-text search across blogs
+ * @route   GET /api/blogs/feed/latest
+ * @desc    Get latest published blogs
+ * @query   limit (optional, default: 10, max: 50)
+ * @access  Public
+ * @rateLimit 100 requests per 15 minutes per IP
+ */
+router.get('/feed/latest', publicReadLimiter, getLatestBlogs);
+
+/**
+ * @route   GET /api/blogs/feed/popular
+ * @desc    Get popular blogs sorted by views
+ * @query   limit (optional, default: 10, max: 50)
+ * @access  Public
+ * @rateLimit 100 requests per 15 minutes per IP
+ */
+router.get('/feed/popular', publicReadLimiter, getPopularBlogs);
+
+/**
+ * @route   GET /api/blogs/search
+ * @desc    Full-text search across blogs (title, summary, tags)
  * @query   query, page, limit
  * @access  Public
+ * @rateLimit 100 requests per 15 minutes per IP
  */
-// router.get('/search', validateSearchQuery, searchBlogsController);
+router.get('/search', publicReadLimiter, validateSearchQuery, searchBlogsController);
 
 /**
  * @route   GET /api/blogs/:slug

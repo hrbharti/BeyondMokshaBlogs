@@ -26,6 +26,7 @@ const searchBlogs = async (searchQuery, limit = 20, offset = 0) => {
 
     // SQL query for full-text search with ranking
     // Uses the immutable function blogs_search_text() for better performance
+    // Only searches published blogs by default
     const searchSQL = `
       SELECT 
         id,
@@ -46,6 +47,7 @@ const searchBlogs = async (searchQuery, limit = 20, offset = 0) => {
       FROM blogs
       WHERE 
         "deletedAt" IS NULL
+        AND status = 'published'
         AND blogs_search_text(title, summary, tags) @@ plainto_tsquery('english', $1)
       ORDER BY rank DESC, "createdAt" DESC
       LIMIT $2 OFFSET $3
@@ -57,6 +59,7 @@ const searchBlogs = async (searchQuery, limit = 20, offset = 0) => {
       FROM blogs
       WHERE 
         "deletedAt" IS NULL
+        AND status = 'published'
         AND blogs_search_text(title, summary, tags) @@ plainto_tsquery('english', $1)
     `;
 

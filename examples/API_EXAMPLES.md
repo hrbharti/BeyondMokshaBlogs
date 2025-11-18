@@ -12,8 +12,8 @@ curl -X POST http://localhost:5000/api/blogs \
   -F "status=published" \
   -F "readTime=8" \
   -F "authorId=1" \
-  -F "content=@./examples/sample-content.html;type=text/html" \
-  -F "cover=@./examples/sample-cover.jpg;type=image/jpeg"
+  -F "content=@./path/to/your-content.html;type=text/html" \
+  -F "cover=@./path/to/your-cover.jpg;type=image/jpeg"
 ```
 
 ## Using JavaScript/Axios
@@ -36,12 +36,12 @@ const createBlog = async () => {
   form.append('authorId', '1');
   
   // Add files
-  form.append('content', fs.createReadStream('./examples/sample-content.html'), {
+  form.append('content', fs.createReadStream('./path/to/your-content.html'), {
     contentType: 'text/html',
     filename: 'content.html'
   });
   
-  form.append('cover', fs.createReadStream('./examples/sample-cover.jpg'), {
+  form.append('cover', fs.createReadStream('./path/to/your-cover.jpg'), {
     contentType: 'image/jpeg',
     filename: 'cover.jpg'
   });

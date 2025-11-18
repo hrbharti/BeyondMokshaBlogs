@@ -299,14 +299,6 @@ https://beyondmoksha.com.s3.ap-south-1.amazonaws.com/blogs/understanding-death-c
 
 ---
 
-### **Option 2: Use the Demo HTML**
-1. Open file: `examples/blog-reader-demo.html`
-2. Change the `BLOG_SLUG` variable to your blog slug
-3. Open the file in your browser
-4. It will fetch and display the blog!
-
----
-
 ## 🔍 **Troubleshooting**
 
 ### **Problem: "Content file is required" error**

@@ -158,7 +158,7 @@ curl -X POST http://localhost:5000/api/blogs \
   -F 'tags=["death-care","planning","guide"]' \
   -F "status=published" \
   -F "readTime=8" \
-  -F "content=@./examples/sample-content.html"
+  -F "content=@./path/to/your-content.html"
 ```
 
 **2. Get all blogs:**

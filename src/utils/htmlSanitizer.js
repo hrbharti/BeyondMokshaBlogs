@@ -3,28 +3,13 @@
  * Sanitizes user-uploaded HTML content to prevent XSS attacks
  */
 
+const { JSDOM } = require('jsdom');
+const createDOMPurify = require('dompurify');
 const logger = require('./logger');
 
-// Lazy-load DOMPurify to handle ES module compatibility
-let DOMPurify = null;
-
-/**
- * Initialize DOMPurify lazily
- */
-const initDOMPurify = async () => {
-  if (DOMPurify) return DOMPurify;
-  
-  try {
-    const { JSDOM } = await import('jsdom');
-    const createDOMPurify = (await import('dompurify')).default;
-    const window = new JSDOM('').window;
-    DOMPurify = createDOMPurify(window);
-    return DOMPurify;
-  } catch (error) {
-    logger.error(`Failed to initialize DOMPurify: ${error.message}`, { error: error.stack });
-    throw error;
-  }
-};
+// Initialize DOMPurify once
+const window = new JSDOM('').window;
+const DOMPurify = createDOMPurify(window);
 
 /**
  * Sanitize HTML content
@@ -32,12 +17,10 @@ const initDOMPurify = async () => {
  * while preserving safe HTML tags and attributes
  * 
  * @param {string|Buffer} htmlContent - Raw HTML content
- * @returns {Promise<string>} Sanitized HTML content
+ * @returns {string} Sanitized HTML content
  */
-const sanitizeHTML = async (htmlContent) => {
+const sanitizeHTML = (htmlContent) => {
   try {
-    // Initialize DOMPurify if not already done
-    const purify = await initDOMPurify();
     
     // Convert Buffer to string if needed
     const htmlString = Buffer.isBuffer(htmlContent) 
@@ -102,7 +85,7 @@ const sanitizeHTML = async (htmlContent) => {
     };
 
     // Sanitize the HTML
-    const sanitized = purify.sanitize(htmlString, config);
+    const sanitized = DOMPurify.sanitize(htmlString, config);
 
     // Log sanitization metrics
     const originalLength = htmlString.length;
@@ -127,10 +110,10 @@ const sanitizeHTML = async (htmlContent) => {
  * Convenience method for uploading sanitized HTML to S3
  * 
  * @param {string|Buffer} htmlContent - Raw HTML content
- * @returns {Promise<Buffer>} Sanitized HTML as Buffer
+ * @returns {Buffer} Sanitized HTML as Buffer
  */
-const sanitizeHTMLToBuffer = async (htmlContent) => {
-  const sanitized = await sanitizeHTML(htmlContent);
+const sanitizeHTMLToBuffer = (htmlContent) => {
+  const sanitized = sanitizeHTML(htmlContent);
   return Buffer.from(sanitized, 'utf-8');
 };
 

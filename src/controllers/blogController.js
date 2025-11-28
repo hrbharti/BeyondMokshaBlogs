@@ -188,7 +188,7 @@ const createBlog = async (req, res) => {
 
     // Sanitize HTML content before uploading to S3
     logger.info(`Sanitizing HTML content for blog: ${slug}`);
-    const sanitizedBuffer = await sanitizeHTMLToBuffer(contentFile.buffer);
+    const sanitizedBuffer = sanitizeHTMLToBuffer(contentFile.buffer);
     
     // Validate HTML structure
     const validation = validateHTMLStructure(sanitizedBuffer.toString());
@@ -347,7 +347,7 @@ const updateBlog = async (req, res) => {
       if (contentFile) {
         // Sanitize HTML content
         logger.info(`Sanitizing updated HTML content for blog: ${targetSlug}`);
-        const sanitizedBuffer = await sanitizeHTMLToBuffer(contentFile.buffer);
+        const sanitizedBuffer = sanitizeHTMLToBuffer(contentFile.buffer);
         
         const newContentUrl = await replaceBlogContent(
           existingBlog.contentUrl,

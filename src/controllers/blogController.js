@@ -583,7 +583,7 @@ const getBlogContent = async (req, res) => {
  */
 const getLatestBlogs = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 5;
     
     // Validate limit
     if (limit < 1 || limit > 50) {
@@ -660,7 +660,7 @@ const getLatestBlogs = async (req, res) => {
  */
 const getPopularBlogs = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 5;
     
     // Validate limit
     if (limit < 1 || limit > 50) {

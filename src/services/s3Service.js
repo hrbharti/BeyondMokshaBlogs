@@ -100,15 +100,16 @@ const fileExists = async (key) => {
 };
 
 /**
- * Upload blog content file (HTML or Markdown)
- * @param {Buffer} contentBuffer - Content file buffer
+ * Upload blog content file
+ * @param {Buffer} contentBuffer - File buffer
  * @param {number} blogId - Blog ID
- * @param {string} contentType - text/html or text/markdown
- * @returns {Promise<string>} Public URL of content file
+ * @param {string} originalFilename - Original filename with extension
+ * @param {string} contentType - MIME type
+ * @returns {Promise<string>} S3 URI of content file
  */
-const uploadBlogContent = async (contentBuffer, blogId, contentType) => {
-  const extension = contentType.includes('markdown') ? 'md' : 'html';
-  const key = `blogs/${blogId}/content.${extension}`;
+const uploadBlogContent = async (contentBuffer, blogId, originalFilename, contentType) => {
+  // Use original filename as provided by user
+  const key = `blogs/${blogId}/${originalFilename}`;
   return await uploadFile(contentBuffer, key, contentType);
 };
 
@@ -129,32 +130,55 @@ const uploadBlogCoverImage = async (imageBuffer, blogId, originalName, mimeType)
 /**
  * Delete blog files from S3
  * @param {number} blogId - Blog ID
+ * @param {string} contentUrl - Current content URL (to get exact filename)
+ * @param {string} coverImageUrl - Current cover image URL (to get exact filename)
  * @returns {Promise<void>}
  */
-const deleteBlogFiles = async (blogId) => {
+const deleteBlogFiles = async (blogId, contentUrl = null, coverImageUrl = null) => {
   try {
-    // Try to delete both possible content files
-    const contentKeys = [
-      `blogs/${blogId}/content.html`,
-      `blogs/${blogId}/content.md`,
-    ];
+    // Delete content file if URL is provided
+    if (contentUrl) {
+      const contentKey = extractKeyFromUrl(contentUrl);
+      if (contentKey && await fileExists(contentKey)) {
+        await deleteFile(contentKey);
+        logger.info(`Deleted content file: ${contentKey}`);
+      }
+    } else {
+      // Fallback: try to delete legacy content files
+      const contentKeys = [
+        `blogs/${blogId}/content.html`,
+        `blogs/${blogId}/content.md`,
+        `blogs/${blogId}/content.docx`,
+      ];
 
-    for (const key of contentKeys) {
-      if (await fileExists(key)) {
-        await deleteFile(key);
+      for (const key of contentKeys) {
+        if (await fileExists(key)) {
+          await deleteFile(key);
+          logger.info(`Deleted legacy content file: ${key}`);
+        }
       }
     }
 
-    // Try to delete cover image (check common extensions)
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
-    for (const ext of imageExtensions) {
-      const key = `blogs/${blogId}/cover${ext}`;
-      if (await fileExists(key)) {
-        await deleteFile(key);
+    // Delete cover image if URL is provided
+    if (coverImageUrl) {
+      const imageKey = extractKeyFromUrl(coverImageUrl);
+      if (imageKey && await fileExists(imageKey)) {
+        await deleteFile(imageKey);
+        logger.info(`Deleted cover image: ${imageKey}`);
+      }
+    } else {
+      // Fallback: try to delete common cover image extensions
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
+      for (const ext of imageExtensions) {
+        const key = `blogs/${blogId}/cover${ext}`;
+        if (await fileExists(key)) {
+          await deleteFile(key);
+          logger.info(`Deleted legacy cover image: ${key}`);
+        }
       }
     }
     
-    logger.info(`Deleted all files for blog ID: ${blogId}`);
+    logger.info(`Completed file deletion for blog ID: ${blogId}`);
   } catch (error) {
     logger.error(`Error deleting blog files for ID ${blogId}: ${error.message}`);
     // Don't throw - allow operation to continue even if S3 delete fails
@@ -212,18 +236,19 @@ const extractKeyFromUrl = (url) => {
  * @param {string} oldUrl - Old content URL
  * @param {Buffer} newContentBuffer - New content buffer
  * @param {number} blogId - Blog ID
- * @param {string} contentType - Content MIME type
+ * @param {string} originalFilename - Original filename with extension
+ * @param {string} contentType - MIME type
  * @returns {Promise<string>} New content URL
  */
-const replaceBlogContent = async (oldUrl, newContentBuffer, blogId, contentType) => {
+const replaceBlogContent = async (oldUrl, newContentBuffer, blogId, originalFilename, contentType) => {
   // Delete old file if it exists
   const oldKey = extractKeyFromUrl(oldUrl);
   if (oldKey && await fileExists(oldKey)) {
     await deleteFile(oldKey);
   }
   
-  // Upload new file
-  return await uploadBlogContent(newContentBuffer, blogId, contentType);
+  // Upload new file with original filename
+  return await uploadBlogContent(newContentBuffer, blogId, originalFilename, contentType);
 };
 
 /**

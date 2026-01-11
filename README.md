@@ -324,8 +324,8 @@ MAX_FILE_SIZE=10485760  # 10MB in bytes
 
 Configure in `.env`:
 ```env
-ALLOWED_CONTENT_TYPES=text/html,text/markdown
-ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp
+ALLOWED_CONTENT_TYPES=application/vnd.openxmlformats-officedocument.wordprocessingml.document
+ALLOWED_IMAGE_TYPES=image/jpeg,image/png,image/webp,svg
 ```
 
 ### Redis Caching (Optional)

@@ -240,20 +240,14 @@ const createBlog = async (req, res) => {
       },
     });
 
-    // Sanitize HTML content before uploading to S3
-    logger.info(`Sanitizing HTML content for blog ID: ${blog.id}`);
-    const sanitizedBuffer = sanitizeHTMLToBuffer(contentFile.buffer);
+    // Since we only accept Word documents now, upload directly without HTML sanitization
+    logger.info(`Uploading Word document for blog ID: ${blog.id}`);
     
-    // Validate HTML structure
-    const validation = validateHTMLStructure(sanitizedBuffer.toString());
-    if (validation.warnings.length > 0) {
-      logger.warn(`HTML validation warnings for blog ${blog.id}: ${validation.warnings.join(', ')}`);
-    }
-
-    // Upload content to S3 using blog ID
+    // Upload content to S3 using original filename
     const contentUrl = await uploadBlogContent(
-      sanitizedBuffer,
+      contentFile.buffer,        // Original file buffer (not sanitized)
       blog.id,
+      contentFile.originalname,  // Original filename
       contentFile.mimetype
     );
 
@@ -345,14 +339,14 @@ const updateBlog = async (req, res) => {
 
       // Replace content file if provided
       if (contentFile) {
-        // Sanitize HTML content
-        logger.info(`Sanitizing updated HTML content for blog ID: ${blogId}`);
-        const sanitizedBuffer = sanitizeHTMLToBuffer(contentFile.buffer);
+        // Upload Word document directly (no HTML sanitization needed)
+        logger.info(`Uploading updated Word document for blog ID: ${blogId}`);
         
         const newContentUrl = await replaceBlogContent(
           existingBlog.contentUrl,
-          sanitizedBuffer,
+          contentFile.buffer,        // Original buffer
           blogId,
+          contentFile.originalname,  // Original filename
           contentFile.mimetype
         );
         updateData.contentUrl = newContentUrl;
@@ -452,8 +446,8 @@ const permanentDeleteBlog = async (req, res) => {
       });
     }
 
-    // Delete files from S3 using blog ID
-    await deleteBlogFiles(blogId);
+    // Delete files from S3 using exact URLs
+    await deleteBlogFiles(blogId, blog.contentUrl, blog.coverImageUrl);
 
     // Delete from database
     await prisma.blog.delete({

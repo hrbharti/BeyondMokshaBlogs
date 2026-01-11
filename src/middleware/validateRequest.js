@@ -233,12 +233,26 @@ const validateFileUpload = (req, res, next) => {
   const contentFile = req.files.content[0];
   const coverFile = req.files.cover ? req.files.cover[0] : null;
 
-  // Validate content file
-  const allowedContentTypes = (process.env.ALLOWED_CONTENT_TYPES || 'text/html,text/markdown').split(',');
+  // Validate content file (Word documents only)
+  const allowedContentTypes = (process.env.ALLOWED_CONTENT_TYPES || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document').split(',');
+  
+  // Additional validation for Word files
   if (!allowedContentTypes.includes(contentFile.mimetype)) {
     return res.status(400).json({
       success: false,
-      message: `Content file must be one of: ${allowedContentTypes.join(', ')}`,
+      message: `Content file must be a Word document (.docx). Received: ${contentFile.mimetype}`,
+      allowedTypes: allowedContentTypes,
+    });
+  }
+
+  // Validate file extension as additional security
+  const fileName = contentFile.originalname || '';
+  const fileExtension = fileName.split('.').pop()?.toLowerCase();
+  
+  if (fileExtension !== 'docx') {
+    return res.status(400).json({
+      success: false,
+      message: `File must have .docx extension. Received: .${fileExtension}`,
     });
   }
 

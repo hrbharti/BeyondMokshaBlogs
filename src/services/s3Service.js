@@ -146,7 +146,7 @@ const deleteBlogFiles = async (blogId) => {
     }
 
     // Try to delete cover image (check common extensions)
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'];
     for (const ext of imageExtensions) {
       const key = `blogs/${blogId}/cover${ext}`;
       if (await fileExists(key)) {
